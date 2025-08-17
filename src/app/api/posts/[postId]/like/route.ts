@@ -3,13 +3,18 @@ import { json } from "@/lib/http";
 import { requireAuth } from "@/lib/auth-guard";
 import { supabaseServer } from "@/lib/supabase-server";
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { postId: string } }
-) {
+// Helper to extract postId from URL: /api/posts/[postId]/like
+function getPostId(req: NextRequest) {
+  const segments = new URL(req.url).pathname.split("/");
+  const postId = segments[segments.indexOf("posts") + 1];
+  if (!postId) throw new Error("Post ID required");
+  return postId;
+}
+
+export async function POST(req: NextRequest) {
   try {
     const { userId } = requireAuth(req);
-    const postId = params.postId;
+    const postId = getPostId(req);
 
     const { data: post } = await supabaseServer
       .from("posts")
@@ -34,31 +39,28 @@ export async function POST(
         message: "liked your post",
       });
     }
+
     return json({ ok: true });
   } catch (e: unknown) {
-    if (e instanceof Error) {
-      return json({ error: e.message }, 401);
-    }
-    return json({ error: "Unauthorized" }, 401);
+    const message = e instanceof Error ? e.message : "Unauthorized";
+    return json({ error: message }, 401);
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { postId: string } }
-) {
+export async function DELETE(req: NextRequest) {
   try {
     const { userId } = requireAuth(req);
+    const postId = getPostId(req);
+
     await supabaseServer
       .from("likes")
       .delete()
       .eq("user_id", userId)
-      .eq("post_id", params.postId);
+      .eq("post_id", postId);
+
     return json({ ok: true });
   } catch (e: unknown) {
-    if (e instanceof Error) {
-      return json({ error: e.message }, 401);
-    }
-    return json({ error: "Unauthorized" }, 401);
+    const message = e instanceof Error ? e.message : "Unauthorized";
+    return json({ error: message }, 401);
   }
 }

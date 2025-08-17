@@ -3,13 +3,19 @@ import { requireAuth } from "@/lib/auth-guard";
 import { supabaseServer } from "@/lib/supabase-server";
 import { json } from "@/lib/http";
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { userId: string } }
-) {
+// Helper to extract userId from URL
+function getUserId(req: NextRequest) {
+  const segments = new URL(req.url).pathname.split("/");
+  const userId = segments[segments.indexOf("users") + 1];
+  if (!userId) throw new Error("User ID required");
+  return userId;
+}
+
+export async function POST(req: NextRequest) {
   try {
     const { userId: me } = requireAuth(req);
-    const target = params.userId;
+    const target = getUserId(req);
+
     if (me === target) return json({ error: "Cannot follow self" }, 400);
 
     const { error } = await supabaseServer
@@ -20,7 +26,7 @@ export async function POST(
       return json({ error: error.message }, 400);
     }
 
-    // notification
+    // create notification
     await supabaseServer.from("notifications").insert({
       recipient_id: target,
       sender_id: me,
@@ -36,13 +42,10 @@ export async function POST(
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { userId: string } }
-) {
+export async function DELETE(req: NextRequest) {
   try {
     const { userId: me } = requireAuth(req);
-    const target = params.userId;
+    const target = getUserId(req);
 
     await supabaseServer
       .from("follows")

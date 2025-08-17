@@ -4,7 +4,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/auth-guard";
 import { postCreateSchema } from "@/lib/validators";
 
-// Helper to extract postId from request
+// Extract postId from URL dynamically
 function getPostId(req: NextRequest) {
   const segments = req.nextUrl.pathname.split("/");
   return segments[segments.length - 1];
@@ -80,6 +80,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     await supabaseServer.from("posts").delete().eq("id", postId);
+
     return json({ ok: true });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unauthorized";

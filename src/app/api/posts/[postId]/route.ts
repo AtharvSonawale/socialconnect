@@ -4,15 +4,16 @@ import { supabaseServer } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/auth-guard";
 import { postCreateSchema } from "@/lib/validators";
 
+// GET /api/admin/posts/[postId]
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: { postId: string } }
+  req: NextRequest,
+  context: { params: { postId: string } }
 ) {
-  const id = params.postId;
+  const { postId } = context.params;
   const { data: post } = await supabaseServer
     .from("posts")
     .select("*")
-    .eq("id", id)
+    .eq("id", postId)
     .maybeSingle();
 
   if (!post) return json({ error: "Not found" }, 404);
@@ -26,10 +27,12 @@ export async function GET(
   return json({ post, author });
 }
 
+// PATCH /api/admin/posts/[postId]
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { postId: string } }
+  context: { params: { postId: string } }
 ) {
+  const { postId } = context.params;
   try {
     const { userId } = requireAuth(req);
     const body = await req.json();
@@ -38,7 +41,7 @@ export async function PATCH(
     const { data: existing } = await supabaseServer
       .from("posts")
       .select("author_id")
-      .eq("id", params.postId)
+      .eq("id", postId)
       .single();
 
     if (!existing || existing.author_id !== userId) {
@@ -48,7 +51,7 @@ export async function PATCH(
     const { error } = await supabaseServer
       .from("posts")
       .update(parsed)
-      .eq("id", params.postId);
+      .eq("id", postId);
 
     if (error) return json({ error: error.message }, 400);
 
@@ -59,23 +62,26 @@ export async function PATCH(
   }
 }
 
+// DELETE /api/admin/posts/[postId]
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { postId: string } }
+  context: { params: { postId: string } }
 ) {
+  const { postId } = context.params;
   try {
     const { userId } = requireAuth(req);
+
     const { data: existing } = await supabaseServer
       .from("posts")
       .select("author_id")
-      .eq("id", params.postId)
+      .eq("id", postId)
       .single();
 
     if (!existing || existing.author_id !== userId) {
       return json({ error: "Forbidden" }, 403);
     }
 
-    await supabaseServer.from("posts").delete().eq("id", params.postId);
+    await supabaseServer.from("posts").delete().eq("id", postId);
     return json({ ok: true });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unauthorized";

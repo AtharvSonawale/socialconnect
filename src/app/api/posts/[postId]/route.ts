@@ -4,12 +4,16 @@ import { supabaseServer } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/auth-guard";
 import { postCreateSchema } from "@/lib/validators";
 
+// Helper to extract postId from request
+function getPostId(req: NextRequest) {
+  const segments = req.nextUrl.pathname.split("/");
+  return segments[segments.length - 1];
+}
+
 // GET /api/admin/posts/[postId]
-export async function GET(
-  req: NextRequest,
-  context: { params: { postId: string } }
-) {
-  const { postId } = context.params;
+export async function GET(req: NextRequest) {
+  const postId = getPostId(req);
+
   const { data: post } = await supabaseServer
     .from("posts")
     .select("*")
@@ -28,11 +32,8 @@ export async function GET(
 }
 
 // PATCH /api/admin/posts/[postId]
-export async function PATCH(
-  req: NextRequest,
-  context: { params: { postId: string } }
-) {
-  const { postId } = context.params;
+export async function PATCH(req: NextRequest) {
+  const postId = getPostId(req);
   try {
     const { userId } = requireAuth(req);
     const body = await req.json();
@@ -63,11 +64,8 @@ export async function PATCH(
 }
 
 // DELETE /api/admin/posts/[postId]
-export async function DELETE(
-  req: NextRequest,
-  context: { params: { postId: string } }
-) {
-  const { postId } = context.params;
+export async function DELETE(req: NextRequest) {
+  const postId = getPostId(req);
   try {
     const { userId } = requireAuth(req);
 

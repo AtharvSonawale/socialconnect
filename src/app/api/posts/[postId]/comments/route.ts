@@ -4,39 +4,51 @@ import { requireAuth } from "@/lib/auth-guard";
 import { supabaseServer } from "@/lib/supabase-server";
 import { commentCreateSchema } from "@/lib/validators";
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { postId: string } }
-) {
-  const { data, error } = await supabaseServer
-    .from("comments")
-    .select("id, author_id, content, created_at")
-    .eq("post_id", params.postId)
-    .order("created_at", { ascending: true });
-
-  if (error) return json({ error: error.message }, 400);
-  return json({ comments: data || [] });
+function getPostId(req: NextRequest) {
+  const url = new URL(req.url);
+  const segments = url.pathname.split("/");
+  // ["", "api", "posts", "<postId>", "comments"]
+  const postId = segments[segments.indexOf("posts") + 1];
+  if (!postId) throw new Error("Post ID required");
+  return postId;
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { postId: string } }
-) {
+export async function GET(req: NextRequest) {
+  try {
+    const postId = getPostId(req);
+
+    const { data, error } = await supabaseServer
+      .from("comments")
+      .select("id, author_id, content, created_at")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true });
+
+    if (error) return json({ error: error.message }, 400);
+    return json({ comments: data || [] });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Failed to fetch comments";
+    return json({ error: message }, 400);
+  }
+}
+
+export async function POST(req: NextRequest) {
   try {
     const { userId } = requireAuth(req);
+    const postId = getPostId(req);
     const body = await req.json();
     const { content } = commentCreateSchema.parse(body);
 
-    const { data: post } = await supabaseServer
+    const { data: post, error: postError } = await supabaseServer
       .from("posts")
       .select("author_id")
-      .eq("id", params.postId)
+      .eq("id", postId)
       .maybeSingle();
 
-    if (!post) return json({ error: "Not found" }, 404);
+    if (postError) return json({ error: postError.message }, 400);
+    if (!post) return json({ error: "Post not found" }, 404);
 
     await supabaseServer.from("comments").insert({
-      post_id: params.postId,
+      post_id: postId,
       author_id: userId,
       content,
     });
@@ -46,7 +58,7 @@ export async function POST(
         recipient_id: post.author_id,
         sender_id: userId,
         notification_type: "comment",
-        post_id: params.postId,
+        post_id: postId,
         message: "commented on your post",
       });
     }

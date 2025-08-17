@@ -53,27 +53,3 @@ export async function PATCH(
     return json({ error: message }, 401);
   }
 }
-
-// DELETE /api/admin/posts/[postId]
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { postId: string } }
-) {
-  const postId = params.postId;
-  try {
-    const { userId } = requireAuth(req);
-    const { data: existing } = await supabaseServer
-      .from("posts")
-      .select("author_id")
-      .eq("id", postId)
-      .single();
-    if (!existing || existing.author_id !== userId) {
-      return json({ error: "Forbidden" }, 403);
-    }
-    await supabaseServer.from("posts").delete().eq("id", postId);
-    return json({ ok: true });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Unauthorized";
-    return json({ error: message }, 401);
-  }
-}

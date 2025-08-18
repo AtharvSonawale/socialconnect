@@ -15,25 +15,16 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(20, Number(searchParams.get("limit") || 20));
     const offset = (page - 1) * limit;
 
-    // get followed + self
-    const { data: following } = await supabaseServer
-      .from("follows")
-      .select("following_id")
-      .eq("follower_id", userId);
-
-    const ids = new Set<string>([
-      userId,
-      ...(following?.map((f) => f.following_id) || []),
-    ]);
-
-    const { data: posts } = await supabaseServer
+    // fetch ALL posts (no follows filter)
+    const { data: posts, error } = await supabaseServer
       .from("posts")
       .select(
         "id, author_id, content, image_url, category, like_count, comment_count, created_at"
       )
-      .in("author_id", Array.from(ids))
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
+
+    if (error) throw error;
 
     // compute interaction status for this user
     const postIds = posts?.map((p) => p.id) || [];

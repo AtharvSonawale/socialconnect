@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { User } from "lucide-react";
 
 type Post = {
   id: string;
@@ -94,6 +95,7 @@ export default function PostPage() {
     <>
       <Navbar />
       <main className="max-w-xl mx-auto p-4">
+        {/* Post Card */}
         <Card className="mb-4">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -104,7 +106,9 @@ export default function PostPage() {
                     alt={post.author.username}
                   />
                 ) : (
-                  <AvatarFallback>{post.author.username[0]}</AvatarFallback>
+                  <AvatarFallback>
+                    <User size={16} />
+                  </AvatarFallback>
                 )}
               </Avatar>
               <CardTitle>
@@ -120,7 +124,7 @@ export default function PostPage() {
               <div className="relative w-full h-64 mt-2 rounded overflow-hidden">
                 <Image
                   src={post.image_url}
-                  alt=""
+                  alt="Post image"
                   fill
                   className="object-cover"
                 />
@@ -132,10 +136,12 @@ export default function PostPage() {
           </CardContent>
         </Card>
 
+        {/* Comments Section */}
         <section className="mt-4">
           <h2 className="font-semibold mb-2">
             Comments ({post.comment_count})
           </h2>
+
           <form onSubmit={addComment} className="flex flex-col gap-2 mb-4">
             <Textarea
               placeholder="Write a comment..."
@@ -145,10 +151,11 @@ export default function PostPage() {
             />
             <Button className="self-end">Send</Button>
           </form>
+
           <div className="flex flex-col gap-2">
             {comments.map((c) => (
               <Card key={c.id} className="p-2">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center">
                   <Avatar className="w-6 h-6">
                     {c.author?.avatar_url ? (
                       <AvatarImage
@@ -157,7 +164,7 @@ export default function PostPage() {
                       />
                     ) : (
                       <AvatarFallback>
-                        {c.author?.username?.[0] || "?"}
+                        <User size={16} />
                       </AvatarFallback>
                     )}
                   </Avatar>

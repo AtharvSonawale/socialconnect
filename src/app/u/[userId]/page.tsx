@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -26,17 +26,23 @@ type UserData = {
 
 export default function UserPage() {
   const { userId } = useParams() as { userId: string };
+  const router = useRouter();
   const [data, setData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const authHeaders = useCallback(() => ({
-    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-  }), []);
+  const authHeaders = useCallback(
+    () => ({
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+    }),
+    []
+  );
 
   const loadUser = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/users/${userId}`, { headers: authHeaders() });
+      const res = await fetch(`/api/users/${userId}`, {
+        headers: authHeaders(),
+      });
       if (!res.ok) throw new Error("Failed to load user");
       const d: UserData = await res.json();
       setData(d);
@@ -69,9 +75,30 @@ export default function UserPage() {
     await loadUser();
   };
 
+  const logout = async () => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      await fetch("/api/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      // Clear tokens from localStorage
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+
+      // Redirect to login page
+      router.push("/auth/login");
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
+  };
+
   if (!data || loading) return <div>Loading...</div>;
 
-  const { user, followers_count, following_count, posts_count, is_following } = data;
+  const { user, followers_count, following_count, posts_count, is_following } =
+    data;
 
   return (
     <>
@@ -110,6 +137,9 @@ export default function UserPage() {
               ) : (
                 <Button onClick={follow}>Follow</Button>
               )}
+              <Button variant="destructive" onClick={logout}>
+                Logout
+              </Button>
             </div>
           </CardContent>
         </Card>
